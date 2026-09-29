@@ -4,6 +4,10 @@ import helmet from 'helmet'
 import pinoHttp from 'pino-http'
 import env from './config/env.js'
 import authRoutes from './routes/auth.routes.js'
+import menusRoutes from './routes/menus.routes.js'
+import permissionsRoutes from './routes/permissions.routes.js'
+import rolesRoutes from './routes/roles.routes.js'
+import usersRoutes from './routes/users.routes.js'
 
 const app = express()
 
@@ -13,6 +17,10 @@ app.use(express.json())
 app.use(pinoHttp())
 
 app.use('/api/auth', authRoutes)
+app.use('/api/users', usersRoutes)
+app.use('/api/roles', rolesRoutes)
+app.use('/api/permissions', permissionsRoutes)
+app.use('/api/menus', menusRoutes)
 
 app.get('/api/health', (_request, response) => {
   response.json({
