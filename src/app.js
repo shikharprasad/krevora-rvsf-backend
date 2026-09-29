@@ -10,9 +10,18 @@ import rolesRoutes from './routes/roles.routes.js'
 import usersRoutes from './routes/users.routes.js'
 
 const app = express()
+const allowedOrigins = new Set([
+  ...env.clientUrls,
+  ...(env.nodeEnv === 'development' ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : []),
+])
 
 app.use(helmet())
-app.use(cors({ origin: env.clientUrl }))
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true)
+    return callback(null, false)
+  },
+}))
 app.use(express.json())
 app.use(pinoHttp({ redact: ['req.headers.authorization'] }))
 
