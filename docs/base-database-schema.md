@@ -14,6 +14,10 @@ seven foundation tables before Sequelize migrations are created.
 - Effective permissions are the union of permissions from all active roles
   assigned to an active user.
 - There are no deny rules or permission inheritance rules in v1.
+- Entity tables record `created_by` and `updated_by` as nullable user
+  references.
+- Junction tables record `created_at` and `created_by`; assignment rows are
+  created or removed rather than updated.
 
 ## 1. users
 
@@ -29,12 +33,16 @@ seven foundation tables before Sequelize migrations are created.
 | `last_login_at` | `TIMESTAMPTZ` | Optional |
 | `created_at` | `TIMESTAMPTZ` | Required, default current time |
 | `updated_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
+| `updated_by` | `BIGINT` | Optional FK to `users.id` |
 
 Indexes:
 
 - Unique index on `username`.
 - Unique index on `email`.
 - Index on `status`.
+- Indexes on `created_by` and `updated_by`.
+- `created_by` and `updated_by` are nullable for initial bootstrap records.
 
 The API must never return `password_hash`.
 
@@ -50,11 +58,14 @@ The API must never return `password_hash`.
 | `is_system` | `BOOLEAN` | Required, default `FALSE` |
 | `created_at` | `TIMESTAMPTZ` | Required, default current time |
 | `updated_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
+| `updated_by` | `BIGINT` | Optional FK to `users.id` |
 
 Indexes and rules:
 
 - Unique index on `key`.
 - Index on `status`.
+- Indexes on `created_by` and `updated_by`.
 - The `SUPER_ADMIN` role has `key = 'SUPER_ADMIN'` and `is_system = TRUE`.
 - System roles cannot be deleted or deactivated through the API.
 - The last active Super Admin cannot lose its role or access.
@@ -71,6 +82,8 @@ Indexes and rules:
 | `status` | `VARCHAR(20)` | Required, `ACTIVE` or `INACTIVE` |
 | `created_at` | `TIMESTAMPTZ` | Required, default current time |
 | `updated_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
+| `updated_by` | `BIGINT` | Optional FK to `users.id` |
 
 Constraints and indexes:
 
@@ -78,6 +91,7 @@ Constraints and indexes:
 - Unique constraint on (`module`, `action`).
 - Index on `module`.
 - Index on `status`.
+- Indexes on `created_by` and `updated_by`.
 - Permission records are developer-defined; there is no permission CRUD API.
 
 ## 4. menus
@@ -94,6 +108,8 @@ Constraints and indexes:
 | `status` | `VARCHAR(20)` | Required, `ACTIVE` or `INACTIVE` |
 | `created_at` | `TIMESTAMPTZ` | Required, default current time |
 | `updated_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
+| `updated_by` | `BIGINT` | Optional FK to `users.id` |
 
 Constraints and indexes:
 
@@ -101,6 +117,7 @@ Constraints and indexes:
 - Partial unique index on non-null `route` values.
 - Index on `parent_id`.
 - Index on (`status`, `parent_id`, `display_order`).
+- Indexes on `created_by` and `updated_by`.
 - A menu cannot be its own parent.
 - Parent menus may have a null route.
 - The service layer must reject circular parent relationships.
@@ -112,11 +129,14 @@ Constraints and indexes:
 |---|---|---|
 | `user_id` | `BIGINT` | Required FK to `users.id` |
 | `role_id` | `BIGINT` | Required FK to `roles.id` |
+| `created_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
 
 Constraints and indexes:
 
 - Composite primary key on (`user_id`, `role_id`).
 - Index on `role_id`.
+- Index on `created_by`.
 - Foreign keys use `ON DELETE CASCADE` for relationship cleanup.
 - Duplicate role assignments are impossible.
 
@@ -126,11 +146,14 @@ Constraints and indexes:
 |---|---|---|
 | `role_id` | `BIGINT` | Required FK to `roles.id` |
 | `permission_id` | `BIGINT` | Required FK to `permissions.id` |
+| `created_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
 
 Constraints and indexes:
 
 - Composite primary key on (`role_id`, `permission_id`).
 - Index on `permission_id`.
+- Index on `created_by`.
 - Foreign keys use `ON DELETE CASCADE` for relationship cleanup.
 - Assignment replacement occurs inside a transaction.
 
@@ -140,11 +163,14 @@ Constraints and indexes:
 |---|---|---|
 | `role_id` | `BIGINT` | Required FK to `roles.id` |
 | `menu_id` | `BIGINT` | Required FK to `menus.id` |
+| `created_at` | `TIMESTAMPTZ` | Required, default current time |
+| `created_by` | `BIGINT` | Optional FK to `users.id` |
 
 Constraints and indexes:
 
 - Composite primary key on (`role_id`, `menu_id`).
 - Index on `menu_id`.
+- Index on `created_by`.
 - Foreign keys use `ON DELETE CASCADE` for relationship cleanup.
 - Assignment replacement occurs inside a transaction.
 
@@ -171,13 +197,16 @@ role_permissions
 role_menus
 ```
 
-Create foreign keys and indexes within the relevant migrations. Seeders
-must run after all migrations succeed.
+Create foreign keys and indexes within the relevant migrations. The
+`users.created_by` and `users.updated_by` foreign keys are nullable
+self-references. Seeders must run after all migrations succeed.
 
 ## Assignment and Authorization Rules
 
 - Assigning roles, permissions, or menus replaces the complete assignment
   set in one database transaction.
+- `created_by` and `updated_by` identify the latest actor only; they are not
+  an audit log.
 - Inactive users cannot authenticate.
 - Inactive roles do not contribute effective permissions.
 - Inactive permissions are ignored during authorization.
