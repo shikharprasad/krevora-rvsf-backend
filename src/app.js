@@ -3,6 +3,7 @@ import express from 'express'
 import helmet from 'helmet'
 import pinoHttp from 'pino-http'
 import env from './config/env.js'
+import authRoutes from './routes/auth.routes.js'
 
 const app = express()
 
@@ -10,6 +11,8 @@ app.use(helmet())
 app.use(cors({ origin: env.clientUrl }))
 app.use(express.json())
 app.use(pinoHttp())
+
+app.use('/api/auth', authRoutes)
 
 app.get('/api/health', (_request, response) => {
   response.json({
