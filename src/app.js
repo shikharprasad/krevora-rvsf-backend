@@ -14,7 +14,7 @@ const app = express()
 app.use(helmet())
 app.use(cors({ origin: env.clientUrl }))
 app.use(express.json())
-app.use(pinoHttp())
+app.use(pinoHttp({ redact: ['req.headers.authorization'] }))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/users', usersRoutes)
